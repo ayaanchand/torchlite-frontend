@@ -21,6 +21,8 @@ interface Message {
   id: string
   role: "user" | "assistant"
   content: string
+  /** NEW: clickable source chips */
+  sources?: { label: string; url: string }[]
 }
 
 interface ConnectionStatus {
@@ -199,6 +201,7 @@ export default function TorchliteChat() {
       const decoder = new TextDecoder()
       let buffer = ""
       let fullAssistantResponse = ""
+      let lastSources: { label: string; url: string }[] | undefined // ← NEW
 
       while (true) {
         const { done, value } = await reader.read()
@@ -212,12 +215,21 @@ export default function TorchliteChat() {
           if (line.startsWith("0:")) {
             try {
               const data = JSON.parse(line.slice(2))
+
               if (data.type === "text-delta" && data.textDelta) {
                 fullAssistantResponse += data.textDelta
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMessage.id ? { ...msg, content: msg.content + data.textDelta } : msg,
                   ),
+                )
+              }
+
+              // ← NEW: handle structured sources from API
+              if (data.type === "sources" && Array.isArray(data.items)) {
+                lastSources = data.items
+                setMessages((prev) =>
+                  prev.map((msg) => (msg.id === assistantMessage.id ? { ...msg, sources: data.items } : msg)),
                 )
               }
             } catch (parseError) {
@@ -227,8 +239,12 @@ export default function TorchliteChat() {
         }
       }
 
-      // Update the final assistant message
-      const finalAssistantMessage = { ...assistantMessage, content: fullAssistantResponse }
+      // Update the final assistant message (include sources)
+      const finalAssistantMessage: Message = {
+        ...assistantMessage,
+        content: fullAssistantResponse,
+        sources: lastSources, // ← NEW
+      }
 
       // Update the chat session with the final assistant message
       setChatSessions((prev) =>
@@ -250,7 +266,9 @@ export default function TorchliteChat() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `I'm having trouble accessing the AstroLabs knowledge base. ${error instanceof Error ? error.message : "Please check the connection and try again."}`,
+        content: `I'm having trouble accessing the AstroLabs knowledge base. ${
+          error instanceof Error ? error.message : "Please check the connection and try again."
+        }`,
       }
       setMessages((prev) => [...prev, errorMessage])
 
@@ -514,6 +532,23 @@ export default function TorchliteChat() {
                       </Avatar>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="prose prose-sm max-w-none">{message.content}</div>
+
+                        {/* NEW: clickable source chips */}
+                        {message.sources?.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {message.sources.map((s, idx) => (
+                              <a
+                                key={idx}
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center rounded-xl border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50"
+                              >
+                                🔗 {s.label}
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}

@@ -57,10 +57,8 @@ export async function POST(req: Request) {
     const rawResponse = await response.text()
     console.log("Raw response:", rawResponse.substring(0, 300))
 
-    // ⬇️ NEW: collect all URLs from backend text (keep order, de-dupe)
-    const allUrls: string[] = Array.from(
-      new Set((rawResponse.match(/https?:\/\/[^\s)\]]+/gi) || []))
-    )
+    // collect all URLs (keep order, de-dupe)
+    const allUrls: string[] = Array.from(new Set(rawResponse.match(/https?:\/\/[^\s)\]]+/gi) || []))
 
     let answerText = ""
     const emojiAnswerMatch = rawResponse.match(/🟢\s*Answer:\s*(.*?)(?=⏱️|$)/s)
@@ -80,13 +78,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // strip labels/sources/timers (but DO NOT strip URLs)
+    // strip labels/sources/timers (but DO NOT strip URLs from rawResponse; we already captured them)
     answerText = answerText.replace(/^(Answer|Ans|A):\s*/i, "").trim()
     answerText = answerText.replace(/^🟢\s*(Answer|Ans|A):\s*/i, "").trim()
     answerText = answerText.replace(/\s*Sources?:\s*.*$/is, "").trim()
     answerText = answerText.replace(/\s*📄\s*.*$/is, "").trim()
     answerText = answerText.replace(/\s*Top\s*\d*\s*sources?:.*$/is, "").trim()
-    // ❌ removed the line that stripped trailing URLs
     answerText = answerText.replace(/⏱️.*$/g, "").trim()
 
     const cleanAnswer = answerText
@@ -95,13 +92,8 @@ export async function POST(req: Request) {
       .replace(/\\"/g, '"')
       .trim()
 
-    // ⬇️ NEW: append multiple clickable links (Markdown)
-    const linksSuffix =
-      allUrls.length > 0
-        ? "\n\n" + allUrls.map((u, i) => `[Source ${i + 1}](${u})`).join("  ")
-        : ""
-
-    const finalAnswer = cleanAnswer + linksSuffix
+    // Stream text first; send sources as a separate structured event
+    const finalAnswer = cleanAnswer
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -118,6 +110,17 @@ export async function POST(req: Request) {
             index++
             setTimeout(tick, 30)
           } else {
+            // after text, emit a structured 'sources' event for clickable chips/buttons in the UI
+            if (allUrls.length) {
+              controller.enqueue(
+                encoder.encode(
+                  `0:${JSON.stringify({
+                    type: "sources",
+                    items: allUrls.map((u, i) => ({ label: `Source ${i + 1}`, url: u })),
+                  })}\n`
+                )
+              )
+            }
             controller.close()
           }
         }
@@ -127,7 +130,7 @@ export async function POST(req: Request) {
 
     return new Response(stream, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8", // keep as-is; UI likely renders Markdown
+        "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       },
