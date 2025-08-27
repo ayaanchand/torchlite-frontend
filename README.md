@@ -1,30 +1,39 @@
-# AstroLabs chat design
+# Torchlite Frontend  
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Torchlite is AstroLabs’ internal knowledge assistant frontend. It provides a simple chat interface that connects to the backend (FastAPI + Supabase) and delivers grounded answers from internal knowledge sources.  
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/vihaan-onestepgreens-projects/v0-astro-labs-chat-design)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/TGJZXGCNBG3)
+---
 
-## Overview
+## 🚀 Overview  
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+- **Framework:** Next.js (React, TypeScript, Tailwind)  
+- **Hosting:** Vercel (Frontend)  
+- **Backend:** FastAPI served with Uvicorn (Cloud Run/Render)  
+- **Integration:** Connects to backend via `RAG_BACKEND_URL`  
 
-## Deployment
+---
 
-Your project is live at:
+## ⚙️ Setup  
 
-**[https://vercel.com/vihaan-onestepgreens-projects/v0-astro-labs-chat-design](https://vercel.com/vihaan-onestepgreens-projects/v0-astro-labs-chat-design)**
+### Prerequisites  
+- Node.js 18+ (check with `node -v`)  
+- npm (comes with Node)  
 
-## Build your app
+### Clone, Install, Run Locally, Deploy  
 
-Continue building your app on:
+```bash
+# Clone & install
+git clone <repo-url> torchlite-frontend
+cd torchlite-frontend
+npm install
 
-**[https://v0.app/chat/projects/TGJZXGCNBG3](https://v0.app/chat/projects/TGJZXGCNBG3)**
+# Run locally
+npm run dev
+# open http://localhost:3000
 
-## How It Works
+# Deploy (Vercel)
+# 1. Push repo to GitHub
+# 2. In Vercel: New Project → Import Repo
+# 3. Set RAG_BACKEND_URL in Environment Variables
+# 4. Deploy → Vercel will auto-build & host the app
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
